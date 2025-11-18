@@ -8,6 +8,10 @@ public class CylinderGL : MonoBehaviour
     [Range(6, 64)] public int segments = 10;
     public Vector3 position;
 
+    public float rotX;
+    public float rotY;
+    public float rotZ;
+
     private void OnPostRender()
     {
         if (material == null) return;
@@ -30,8 +34,14 @@ public class CylinderGL : MonoBehaviour
             float angle = Mathf.PI * 2f * i / segments;
             float x = Mathf.Cos(angle) * radius;
             float z = Mathf.Sin(angle) * radius;
-            top[i] = position + new Vector3(x, height / 2f, z);
-            bottom[i] = position + new Vector3(x, -height / 2f, z);
+            top[i] = new Vector3(x, height / 2f, z);
+            bottom[i] = new Vector3(x, -height / 2f, z);
+
+            top[i] = ApplyRotation(top[i]);
+            bottom[i] = ApplyRotation(bottom[i]);
+
+            top[i] += position;
+            bottom[i] += position;
         }
 
         for (int i = 0; i < segments; i++)
@@ -41,6 +51,35 @@ public class CylinderGL : MonoBehaviour
             DrawLine(bottom[i], bottom[next]);
             DrawLine(top[i], bottom[i]);
         }
+    }
+
+    Vector3 ApplyRotation(Vector3 p)
+    {
+        float rx = rotX * Mathf.Deg2Rad;
+        float ry = rotY * Mathf.Deg2Rad;
+        float rz = rotZ * Mathf.Deg2Rad;
+
+
+        p = new Vector3(
+            p.x,
+            p.y * Mathf.Cos(rx) - p.z * Mathf.Sin(rx),
+            p.y * Mathf.Sin(rx) + p.z * Mathf.Cos(rx)
+        );
+
+
+        p = new Vector3(
+            p.x * Mathf.Cos(ry) + p.z * Mathf.Sin(ry),
+            p.y,
+            -p.x * Mathf.Sin(ry) + p.z * Mathf.Cos(ry)
+        );
+
+        p = new Vector3(
+            p.x * Mathf.Cos(rz) - p.y * Mathf.Sin(rz),
+            p.x * Mathf.Sin(rz) + p.y * Mathf.Cos(rz),
+            p.z
+        );
+
+        return p;
     }
 
     void DrawLine(Vector3 a, Vector3 b)
