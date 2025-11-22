@@ -1,12 +1,18 @@
 using JetBrains.Annotations;
+using Unity.VisualScripting;
 using UnityEngine;
+using Vector3 = System.Numerics.Vector3;
 
 public class LineGen : MonoBehaviour
 {
     public Material material;
     public float cubeSize;
     public Vector2 cubePos;
+    
+    public Vector2 cubePos2;
+    public float zPos2;
     public float zPos;
+    public float zRot = 0;
 
     private void OnPostRender()
     {
@@ -24,26 +30,62 @@ public class LineGen : MonoBehaviour
 
         GL.Begin(GL.LINES);
         material.SetPass(0);
+        
 
-        var frontSquare = GetCube();
+        var frontSquare = GetCube(cubePos);
         var frontZ = PerspectiveCamera.Instance.GetPerspective(zPos + cubeSize * .5f);
-        var backSquare = GetCube();
+        var backSquare = GetCube(cubePos);
         var backZ = PerspectiveCamera.Instance.GetPerspective(zPos - cubeSize * .5f);
 
+        var cubeDimensions1 = new CubeDimensions()
+        {
+            minX = -1 * cubeSize + cubePos.x,
+            minY = -1 * cubeSize + cubePos.y,
+            minZ = -1 * cubeSize + zPos,
+            maxX = 1 * cubeSize + cubePos.x,
+            maxY = 1 * cubeSize + cubePos.y,
+            maxZ = 1 * cubeSize + zPos,
+        };
+        
+        var frontSquare2 = GetCube(cubePos2);
+        var frontZ2 = PerspectiveCamera.Instance.GetPerspective(zPos2 + cubeSize * .5f);
+        var backSquare2 = GetCube(cubePos2);
+        var backZ2 = PerspectiveCamera.Instance.GetPerspective(zPos2 - cubeSize * .5f);
+
+        var cubeDimensions2 = new CubeDimensions()
+        {
+            minX = -1 * cubeSize + cubePos2.x,
+            minY = -1 * cubeSize + cubePos2.y,
+            minZ = -1 * cubeSize + zPos2,
+            maxX = 1 * cubeSize + cubePos2.x,
+            maxY = 1 * cubeSize + cubePos2.y,
+            maxZ = 1 * cubeSize + zPos2,
+        };
+        
+
+        //RotationalMatrixComputation(ref frontSquare);
+        //RotationalMatrixComputation(ref backSquare);
         var computedFront = RenderSquare(frontSquare, frontZ);
         var computedBack = RenderSquare(backSquare, backZ);
+
+        var computedFront2 = RenderSquare(frontSquare2, frontZ2);
+        var computedBack2 = RenderSquare(backSquare2, backZ2);
 
         for (int i = 0; i < 4; i++)
         {
             GL.Vertex(computedFront[i]);
             GL.Vertex(computedBack[i]);
+            GL.Vertex(computedFront2[i]);
+            GL.Vertex(computedBack2[i]);
         }
+        
+        Debug.Log(cubeDimensions1.Collide(cubeDimensions2) ? "Hit" : "No Hit");
 
         GL.End();
         GL.PopMatrix();
     }
 
-    public Vector2[] GetCube()
+    public Vector2[] GetCube(Vector2 pos)
     {
         var faceArray = new Vector2[]
         {
@@ -55,7 +97,7 @@ public class LineGen : MonoBehaviour
 
         for(var i = 0; i < faceArray.Length; i++)
         {
-            faceArray[i] = new Vector2(cubePos.x + faceArray[i].x, cubePos.y + faceArray[i].y) * cubeSize;
+            faceArray[i] = new Vector2(pos.x + faceArray[i].x, pos.y + faceArray[i].y) * cubeSize;
         }
 
         return faceArray;
@@ -73,5 +115,66 @@ public class LineGen : MonoBehaviour
         }
         return computedSquare;
     }
+
+    private void RotationalMatrixComputation(ref Vector2[] squareElements)
+    {
+        var convertedRadians = zRot * Mathf.Deg2Rad;
+        for (var i = 0; i < squareElements.Length; i++)
+        {
+            squareElements[i] = new Vector2(squareElements[i].x * Mathf.Cos(convertedRadians) - squareElements[i].y * Mathf.Sin(convertedRadians), 
+                squareElements[i].y * Mathf.Cos(convertedRadians) + squareElements[i].x * Mathf.Sin(convertedRadians));
+        }
+    }
+
+
+    public struct CubeDimensions
+    {
+        public float minX;
+        public float minY;
+        public float minZ;
+        
+        public float maxX;
+        public float maxY;
+        public float maxZ;
+
+        public bool Collide(CubeDimensions otherCube)
+        {
+            bool overlapX = (minX <= otherCube.maxX && maxX >= otherCube.minX);
+            bool overlapY = (minY <= otherCube.maxY && maxY >= otherCube.minY);
+            bool overlapZ = (minZ <= otherCube.maxZ && maxZ >= otherCube.minZ);
+            
+            return overlapX && overlapY && overlapZ;
+        } 
+    }
+
+        public CubeDimensions GetWorldCubeDimensions()
+    {
+        return new CubeDimensions()
+        {
+            minX = cubePos.x - cubeSize,
+            maxX = cubePos.x + cubeSize,
+            minY = cubePos.y - cubeSize,
+            maxY = cubePos.y + cubeSize,
+            minZ = zPos      - cubeSize,
+            maxZ = zPos      + cubeSize
+        };
+    }
+
+
+    public struct Circle
+    {
+        Vector3 Pos;
+        float radius;
+
+        public bool Collides(CubeDimensions cube)
+        {
+            //Clamp pos X w/ minX and maxX
+            //Clamp pos Y w/ minY and maxY
+            //Clamp pos Z w/ minZ and MaxZ
+            //Vector 3 compare radius and the length of the new point
+            return true;
+        }
+    }
+    
 
 }
